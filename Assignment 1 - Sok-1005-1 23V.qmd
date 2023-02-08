@@ -1,0 +1,195 @@
+---
+title: "Assignment 1 sok-1005"
+author: "13"
+format: pdf
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+1 + 1
+```
+
+You can add options to executable code like this
+
+```{r}
+#| echo: false
+2 * 2
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
+
+```{r}
+rm(list=ls())
+library(tidyverse)
+library(zoo)
+library(lubridate)
+```
+
+```{r}
+df_lower <- read_table2("https://www.nsstc.uah.edu/data/msu/v6.0/tlt/uahncdc_lt_6.0.txt")
+```
+
+```{r}
+df_mid <- read_table2("https://www.nsstc.uah.edu/data/msu/v6.0/tmt/uahncdc_mt_6.0.txt")
+```
+
+```{r}
+df_Tropopause <- read_table2("https://www.nsstc.uah.edu/data/msu/v6.0/ttp/uahncdc_tp_6.0.txt")
+```
+
+```{r}
+df_Stratosphere <- read_table2("https://www.nsstc.uah.edu/data/msu/v6.0/tls/uahncdc_ls_6.0.txt")
+```
+
+```{r}
+
+df_list <- list(df_lower, df_mid, df_Stratosphere,df_Tropopause)
+
+#merge all data frames in list
+Reduce(function(x, y) merge(x, y, all=TRUE), df_list)
+```
+
+```{r}
+head(df_lower)
+tail(df_lower, 20)
+```
+
+```{r}
+df_lower[1:10 , 1]
+
+df_lower[1:529,]
+tail(df_lower[1:529, ])
+```
+
+```{r}
+ df<- df_lower[1:500, ]
+```
+
+```{r}
+which(df_lower$Year %in% "Year")
+
+
+df_lower <- df_lower[1:which(df_lower$Year %in% "Year")-1, ]
+```
+
+```{r}
+tail(df_lower)
+```
+
+```{r}
+df_base <- df_lower[ , 1:5]
+df_base 
+
+df_base$Date <- as.Date(paste(df_base$Year, df_base$Mo, 1, sep="-"), format = "%Y-%m-%d")
+head(df_base)
+```
+
+```{r}
+df_lower %>% select(Year, Mo, Globe, Land, Ocean) %>% 
+  mutate(Date = ymd(paste(df_lower$Year, df_lower$Mo, 1, sep="-")))
+
+
+```
+
+```{r}
+df_tidy <- df_lower %>% 
+  mutate(Date = ymd(paste(df_lower$Year, df_lower$Mo, 1, sep="-"))) %>% 
+  select(Date, Globe, Land, Ocean) 
+
+```
+
+```{r}
+df_tidy %>% mutate(Year = year(Date),
+                   Month = month(Date),
+                   Month2 = month(Date, label = TRUE, abbr = FALSE))
+
+```
+
+```{r}
+df_tidy <- df_tidy %>% mutate(Year = year(Date),
+                              Month = month(Date),
+                              Month2 = month(Date, label = TRUE, abbr = FALSE))
+
+df_tidy <- df_tidy %>% select(Year, Month, Date, Globe, Land, Ocean)
+df_tidy
+```
+
+```{r}
+str(df_base)
+str(df_tidy)
+```
+
+```{r}
+df_list$Globe <- as.numeric(df_list$Globe)
+str(df_list)
+```
+
+```{r}
+str(df_list)
+```
+
+```{r}
+df_tidy <- df_tidy %>% mutate_at(vars(Globe, Land, Ocean), ~as.numeric(.))
+str(df_tidy)
+```
+
+```{r}
+df_tidy%>%
+    mutate(roll_Globe = rollmean(Globe, k = 3, fill = NA, align = "right"))
+```
+
+```{r}
+df_lower %>% select(Year, Mo, Globe, Land, Ocean) %>% 
+  mutate(Date = ymd(paste(df_lower$Year, df_lower$Mo, 1, sep="-"))) %>% 
+  mutate(Year = year(Date), Month = month(Date)) %>%
+  select(Year, Month, Date, Globe, Land, Ocean) %>%  
+  mutate_if(is.character, ~as.numeric(.))
+```
+
+```{r}
+df_tidy %>% filter(Year >= 2000)
+
+df_tidy %>% filter(Year != 1979) %>% group_by(Year) %>% summarise(Average.Temp=mean(Globe))
+df_tidy %>% filter(Year > 1979)
+df_tidy %>% filter(Year >= 1980)
+```
+
+```{r}
+df_tidy %>% filter(Year != 1979) %>% group_by(Year) %>% mutate(Average.Temp=mean(Globe)) %>%
+  ggplot(aes(x=Date, y=Globe)) + geom_line() +
+  geom_line(aes(x=Date, y=Average.Temp), col="blue")
+```
+
+```{r}
+df_tidy %>%
+  mutate(roll_Globe = rollmean(Globe, k = 13, fill = NA, align = "right"))
+```
+
+```{r}
+df_tidy %>% filter(Year != 1979) %>% group_by(Year) %>%  
+  ggplot(aes(x=Date, y=Globe)) + 
+  geom_line(col="lightblue") + geom_point(col="blue") +
+  geom_line(aes(y=zoo::rollmean(Globe, 13, fill=NA)), col="red", size=1.3) 
+```
+
+```{r}
+df_tidy %>% filter(Year != 1979) %>%
+  group_by(Year) %>% 
+  summarise(Globe=mean(Globe)) %>% 
+  ggplot(aes(x=Year, y=Globe)) + geom_line() +
+  ggtitle("Plot of temperature over time") +
+  ylab("Global Temperature") + xlab("Year") +
+  geom_smooth(method = lm, se = FALSE)
+```
+
+```{r}
+
+```
